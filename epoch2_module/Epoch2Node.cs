@@ -22,27 +22,28 @@ namespace epoch2_module
         public string state = ModuleStatus.INIT;
         private IRestServer server;
 
-        private Gen5.Application gen5;
+        public Gen5.Application gen5;
         private BTIAutoStacker bTIAutoStacker;
-        private short stackerComPort = 2;
-        private short epochReaderType = 1;
-        private short readerComPort = 3;
-        private int readerBaudRate = 3600;
+        private short stackerComPort = 5;
+        private short epochReaderType = 22;
+        private short readerComPort = 4;
+        private int readerBaudRate = 38400;
 
 
-        ~Epoch2Node()
+        public void deconstruct()
         {
             Console.WriteLine("Exiting...");
-            //client.Disconnect();
-            //client.Close();
             server.Stop();
             bTIAutoStacker.CloseComPort();
+            gen5 = null;
+            GC.Collect();
+            Console.WriteLine("Exited...");
         }
 
         private void OnExecute()
         {
 
-            InitializeEpoch2();
+            //InitializeEpoch2();
             InitializePlateStacker();
 
             server = RestServerBuilder.UseDefaults().Build();
@@ -51,7 +52,6 @@ namespace epoch2_module
             server.Prefixes.Clear();
             server.Prefixes.Add(server_url);
             server.Locals.TryAdd("state", state);
-            //server.Locals.TryAdd("client", client);
             try
             {
                 //server.Start();
@@ -62,6 +62,10 @@ namespace epoch2_module
             {
                 Console.WriteLine(ex.ToString());
             }
+            finally
+            {
+                deconstruct();
+            }
         }
 
         private void InitializeEpoch2()
@@ -69,8 +73,9 @@ namespace epoch2_module
             gen5 = new Gen5.Application();
             gen5.ConfigureSerialReader(epochReaderType, readerComPort, readerBaudRate);
             Console.WriteLine(gen5.TestReaderCommunication());
-            gen5.CarrierIn();
             gen5.CarrierOut();
+            Thread.Sleep(5000);
+            gen5.CarrierIn();
         }
 
         private void InitializePlateStacker()
@@ -79,8 +84,30 @@ namespace epoch2_module
             bTIAutoStacker.SetComPort(stackerComPort);
             bTIAutoStacker.OpenComPort(stackerComPort);
             Console.WriteLine(bTIAutoStacker.TestCommunicationWithoutDialog());
-            bTIAutoStacker.HomeAllAxes();
+            Console.WriteLine(bTIAutoStacker.GetSystemStatus());
+            //Console.WriteLine(bTIAutoStacker.ResetStacker());
+            //Console.ReadLine();
+            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
+            //Console.WriteLine(bTIAutoStacker.HomeAllAxes());
+            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
+            //Thread.Sleep(30000);
+            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
+            //Console.WriteLine(bTIAutoStacker.ResetStacker());
+            //Thread.Sleep(10000);
+            //Console.WriteLine("Blah");
             //bTIAutoStacker.PresentPlateOnCarrier();
+
+            bTIAutoStacker.AboutBox();
+            //Console.WriteLine(bTIAutoStacker.SetGripperWidth(85598));
+            //Console.WriteLine(bTIAutoStacker.SetLidMode(0));
+            //Console.WriteLine(bTIAutoStacker.TransferPlateFromOutToIn());
+            //Console.WriteLine("Blah2");
+            //Console.WriteLine(bTIAutoStacker.PlateFromInstrumentToClaw());
+            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
+            //Thread.Sleep(10000);
+            Console.ReadLine();
+            Console.WriteLine(bTIAutoStacker.GetSystemStatus());
+            //Console.WriteLine(bTIAutoStacker.SendPlateToInstrument());
         }
     }
 }

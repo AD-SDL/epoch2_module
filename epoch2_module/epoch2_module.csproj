@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <Reference Include="Interop.Gen5">
-      <HintPath>..\..\..\..\Downloads\Gen5 installer\OLE Automation\Samples\C# Sample\obj\Debug\Interop.Gen5.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\Agilent\Gen5 3.15\OLE Automation\Samples\C# Sample\obj\Debug\Interop.Gen5.dll</HintPath>
     </Reference>
   </ItemGroup>
 

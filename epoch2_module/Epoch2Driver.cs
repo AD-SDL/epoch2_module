@@ -65,8 +65,8 @@ namespace epoch2_module
                 return;
             }
             Console.WriteLine(experiment_file_path);
-            object result = gen5.OpenExperiment((string) experiment_file_path);
-            if (result == null)
+            Gen5.Experiment experiment = (Gen5.Experiment) gen5.OpenExperiment((string) experiment_file_path);
+            if (experiment == null)
             {
                 action.result = StepFailed("No experiment file path provided");
                 return;
@@ -75,17 +75,56 @@ namespace epoch2_module
             {
                 Console.WriteLine("Opened experiment file");
             }
-            Gen5.Experiment experiment = (Gen5.Experiment) result;
             Gen5.Plates plates = (Gen5.Plates)experiment.Plates;
             if (plates == null)
             {
-                throw new Exception("No plates defined in experiment");
+                action.result = StepFailed("No plates found in experiment file");
+                experiment.Close();
+                return;
+            }
+            else if (plates.Count != 1)
+            {
+                action.result = StepFailed("Currently only supports one plate per experiment");
+                experiment.Close();
+                return;
+            }
+
+            Gen5.Plate plate = (Gen5.Plate) plates.GetPlate(Index: 1);
+
+            Gen5.PlateReadMonitor plate_read_monitor = (Gen5.PlateReadMonitor) plate.StartRead();
+            if (plate_read_monitor == null)
+            {
+                action.result = StepFailed("Failed to start plate read");
+                experiment.Close();
+                return;
             }
             else
             {
-                Console.Write("Plate Count: ");
-                Console.WriteLine(plates.Count);
+                Console.WriteLine("Started plate read");
             }
+
+            while (plate_read_monitor.ReadInProgress)
+            {
+                System.Threading.Thread.Sleep(1000);
+            }
+
+            if (plate_read_monitor.ErrorsCount > 0)
+            {
+                action.result = StepFailed("Errors occurred during plate read");
+                for (int i = 0; i < plate_read_monitor.ErrorsCount; i++)
+                {
+                    var error_message = plate_read_monitor.GetErrorMessage(ErrorIndex: i);
+                    Console.WriteLine(error_message);
+                    action.result["action_log"] = action.result["action_log"] + error_message;
+                }
+                experiment.Close();
+                return;
+            }
+            else
+            {
+                Console.WriteLine("Plate read completed.");
+            }
+            experiment.Close();
             action.result = StepSucceeded("Experiment loaded");
         }
 

@@ -20,10 +20,9 @@ namespace epoch2_module
         public bool Simulate { get; } = true;
 
         public string state = ModuleStatus.INIT;
-        private IRestServer server;
+        private IRestServer server = RestServerBuilder.UseDefaults().Build();
 
-        public Gen5.Application gen5;
-        private BTIAutoStacker bTIAutoStacker;
+        public Gen5.Application? gen5;
         private short stackerComPort = 5;
         private short epochReaderType = 22;
         private short readerComPort = 4;
@@ -43,10 +42,8 @@ namespace epoch2_module
         private void OnExecute()
         {
 
-            //InitializeEpoch2();
-            InitializePlateStacker();
+            InitializeEpoch2();
 
-            server = RestServerBuilder.UseDefaults().Build();
             string server_url = "http://" + Hostname + ":" + Port.ToString() + "/";
             Console.WriteLine(server_url);
             server.Prefixes.Clear();
@@ -54,7 +51,7 @@ namespace epoch2_module
             server.Locals.TryAdd("state", state);
             try
             {
-                //server.Start();
+                server.Start();
                 Console.WriteLine("Press enter to stop the server");
                 Console.ReadLine();
             }
@@ -76,38 +73,6 @@ namespace epoch2_module
             gen5.CarrierOut();
             Thread.Sleep(5000);
             gen5.CarrierIn();
-        }
-
-        private void InitializePlateStacker()
-        {
-            bTIAutoStacker = new BTIAutoStacker();
-            bTIAutoStacker.SetComPort(stackerComPort);
-            bTIAutoStacker.OpenComPort(stackerComPort);
-            Console.WriteLine(bTIAutoStacker.TestCommunicationWithoutDialog());
-            Console.WriteLine(bTIAutoStacker.GetSystemStatus());
-            //Console.WriteLine(bTIAutoStacker.ResetStacker());
-            //Console.ReadLine();
-            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
-            //Console.WriteLine(bTIAutoStacker.HomeAllAxes());
-            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
-            //Thread.Sleep(30000);
-            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
-            //Console.WriteLine(bTIAutoStacker.ResetStacker());
-            //Thread.Sleep(10000);
-            //Console.WriteLine("Blah");
-            //bTIAutoStacker.PresentPlateOnCarrier();
-
-            bTIAutoStacker.AboutBox();
-            //Console.WriteLine(bTIAutoStacker.SetGripperWidth(85598));
-            //Console.WriteLine(bTIAutoStacker.SetLidMode(0));
-            //Console.WriteLine(bTIAutoStacker.TransferPlateFromOutToIn());
-            //Console.WriteLine("Blah2");
-            //Console.WriteLine(bTIAutoStacker.PlateFromInstrumentToClaw());
-            //Console.WriteLine(bTIAutoStacker.GetSystemStatus());
-            //Thread.Sleep(10000);
-            Console.ReadLine();
-            Console.WriteLine(bTIAutoStacker.GetSystemStatus());
-            //Console.WriteLine(bTIAutoStacker.SendPlateToInstrument());
         }
     }
 }

@@ -79,7 +79,7 @@ namespace biostack_module
                             ""name"":""run_experiment"",
                             ""args"": [
                                 {
-                                    ""name"":""experiment_filepath"",
+                                    ""name"":""experiment_file_path"",
                                     ""type"":""string"",
                                     ""description"":""Path to the experiment file to run."",
                                     ""required"":true

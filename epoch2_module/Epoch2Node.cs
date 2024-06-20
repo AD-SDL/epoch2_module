@@ -45,6 +45,7 @@ namespace epoch2_module
             server.Locals.TryAdd("state", state);
             server.Locals.TryAdd("epoch2Driver", epoch2Driver);
             server.Start();
+            Console.WriteLine("REST Server running on port {0}", Port.ToString());
         }
 
         private void OnExecute()

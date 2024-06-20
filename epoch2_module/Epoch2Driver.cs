@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,7 +30,14 @@ namespace epoch2_module
                 gen5 = new Gen5.Application();
             }
             gen5.ConfigureSerialReader(epochReaderType, readerComPort, readerBaudRate);
-            Console.WriteLine(gen5.TestReaderCommunication());
+            if (gen5.TestReaderCommunication() == 1)
+            {
+                Console.WriteLine("Successfully connected to Epoch2");
+            }
+            else
+            {
+                Console.WriteLine("Unable to connect to the reader, check connection and power, and ensure there isn't other software controlling the device.");
+            }
         }
 
         public void CarrierOut(ref ActionRequest action)
@@ -57,7 +65,8 @@ namespace epoch2_module
             {
                 gen5 = new Gen5.Application();
             }
-            object experiment_file_path;
+            object? experiment_file_path;
+            Console.WriteLine(action.args);
             action.args.TryGetValue("experiment_file_path", out experiment_file_path);
             if (experiment_file_path == null)
             {
@@ -65,16 +74,25 @@ namespace epoch2_module
                 return;
             }
             Console.WriteLine(experiment_file_path);
-            Gen5.Experiment experiment = (Gen5.Experiment) gen5.OpenExperiment((string) experiment_file_path);
-            if (experiment == null)
+            Gen5.Experiment? experiment;
+            try
             {
-                action.result = StepFailed("No experiment file path provided");
+                experiment = (Gen5.Experiment)gen5.OpenExperiment((string)experiment_file_path);
+                if (experiment == null)
+                {
+                    action.result = StepFailed("No experiment file path provided");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("Opened experiment file");
+                }
+            } catch (Exception ex)
+            {
+                action.result = StepFailed("Failed to open experiment file: " + ex.Message);
                 return;
             }
-            else
-            {
-                Console.WriteLine("Opened experiment file");
-            }
+            
             Gen5.Plates plates = (Gen5.Plates)experiment.Plates;
             if (plates == null)
             {
@@ -105,12 +123,12 @@ namespace epoch2_module
 
             while (plate_read_monitor.ReadInProgress)
             {
-                System.Threading.Thread.Sleep(1000);
+                System.Threading.Thread.Sleep(30000);
             }
 
             if (plate_read_monitor.ErrorsCount > 0)
             {
-                action.result = StepFailed("Errors occurred during plate read");
+                action.result = StepFailed("Errors occurred during plate read: ");
                 for (int i = 0; i < plate_read_monitor.ErrorsCount; i++)
                 {
                     var error_message = plate_read_monitor.GetErrorMessage(ErrorIndex: i);
@@ -124,8 +142,30 @@ namespace epoch2_module
             {
                 Console.WriteLine("Plate read completed.");
             }
+
+            object? file_export_names = null;
+            plate.GetFileExportNames(false, ref file_export_names);
+            Console.WriteLine(file_export_names);
+            string[] file_export_array = (string[])file_export_names;
+            string old_temp_file = Path.GetTempFileName();
+            string temp_file = Path.ChangeExtension(old_temp_file, ".csv");
+            File.Move(old_temp_file, temp_file);
+            if (file_export_array.Length == 0)
+            {
+                Console.WriteLine("No configured file exports");
+                Console.WriteLine(temp_file);
+                plate.FileExport(temp_file);
+                action.result = StepSucceeded(temp_file);
+            } else
+            {
+                // Note: If there are multiple file exports configured, we only return the first one
+                Console.WriteLine(file_export_array[0]);
+                Console.WriteLine(temp_file);
+                plate.FileExportEx(file_export_array[0], temp_file);
+                action.result = StepResult(action_response: StepStatus.SUCCEEDED, action_msg: temp_file, action_log: temp_file);
+                action.result_is_file = true;
+            }
             experiment.Close();
-            action.result = StepSucceeded("Experiment loaded");
         }
 
         ~Epoch2Driver() => Dispose(false);
@@ -145,6 +185,7 @@ namespace epoch2_module
                 {
                     gen5 = null;
                     GC.Collect();
+                    Console.WriteLine("Disconnected from Epoch2");
                 }
                 _disposedValue = true;
             }

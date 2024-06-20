@@ -24,11 +24,6 @@ namespace epoch2_module
         public void ActionHandler(ref ActionRequest action)
         {
             Console.WriteLine($"Started handling action: {action.name}; {action.args}");
-            //if (epoch2Driver.InProgress)
-            //{
-            //    action.result = StepFailed("Instrument action in progress");
-            //    return;
-            //}
             switch (action.name)
             {
                 case "carrier_in":
@@ -41,7 +36,6 @@ namespace epoch2_module
                     break;
                 case "run_experiment":
                     epoch2Driver.RunExperiment(ref action);
-                    action.result = StepSucceeded("Run Experiment");
                     break;
                 default:
                     Console.WriteLine("Unknown action: " + action.name);

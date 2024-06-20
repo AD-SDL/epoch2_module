@@ -1,4 +1,5 @@
-﻿using Grapevine;
+﻿using System;
+using Grapevine;
 using Newtonsoft.Json;
 
 namespace WEI
@@ -31,6 +32,7 @@ namespace WEI
         public string name = "";
         public Dictionary<string, object> args;
         public Dictionary<string, string> result = ModuleHelpers.StepResult();
+        public bool result_is_file = false;
         IHttpContext? action_context;
 
         /// <summary>
@@ -57,6 +59,26 @@ namespace WEI
             if (action_context is null)
             {
                 throw new Exception("Attempted to return result without http context.");
+            }
+            if (result_is_file)
+            {
+                action_context.Response.Headers.Add("x-wei-action_response", result["action_response"]);
+                action_context.Response.Headers.Add("x-wei-action_log", result["action_log"]);
+                action_context.Response.Headers.Add("x-wei-action_msg", result["action_msg"]);
+
+                FileStream fs;
+                try
+                {
+                    fs = File.OpenRead(result["action_msg"]);
+                    BinaryReader binaryReader = new BinaryReader(fs);
+                    var file_bytes = binaryReader.ReadBytes((int)fs.Length);
+                    await action_context.Response.SendResponseAsync(file_bytes);
+                    return;
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"Error returning file {ex.Message}");
+                }
             }
             await action_context.Response.SendResponseAsync(JsonConvert.SerializeObject(result));
         }

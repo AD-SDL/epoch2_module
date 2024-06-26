@@ -15,7 +15,6 @@ namespace epoch2_module
         private Gen5.Application? gen5;
         private bool _disposedValue;
         private short epochReaderType = 22;
-        private short readerComPort = 4;
         private int readerBaudRate = 38400;
 
         public Epoch2Driver()
@@ -23,7 +22,7 @@ namespace epoch2_module
             gen5 = new Gen5.Application();
         }
 
-        public void InitializeEpoch2()
+        public void InitializeEpoch2(short readerComPort)
         {
             if (gen5 == null)
             {

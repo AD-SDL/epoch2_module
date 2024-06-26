@@ -20,6 +20,9 @@ namespace epoch2_module
         [Option(Description = "Whether or not to simulate the instrument")]
         public bool Simulate { get; } = true;
 
+        [Option(Description = "The COM Port of the reader to control")]
+        public short COMPort { get; } = 4;
+
         public string state = ModuleStatus.INIT;
         private IRestServer server = RestServerBuilder.UseDefaults().Build();
 
@@ -53,7 +56,8 @@ namespace epoch2_module
             try
             {
                 RunServer();
-                epoch2Driver.InitializeEpoch2();
+                Console.WriteLine("COM Port: " + COMPort.ToString());
+                epoch2Driver.InitializeEpoch2(COMPort);
                 UpdateModuleStatus(server, ModuleStatus.IDLE);
             }
             catch (Exception ex)

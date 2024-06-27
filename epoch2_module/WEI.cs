@@ -33,6 +33,7 @@ namespace WEI
         public Dictionary<string, object> args;
         public Dictionary<string, string> result = ModuleHelpers.StepResult();
         public bool result_is_file = false;
+        public bool cleanup_result_file = false;
         IHttpContext? action_context;
 
         /// <summary>
@@ -81,6 +82,10 @@ namespace WEI
                 }
             }
             await action_context.Response.SendResponseAsync(JsonConvert.SerializeObject(result));
+            if (result_is_file && cleanup_result_file)
+            {
+                File.Delete(result["action_msg"]);
+            }
         }
 
         public async Task ReturnResult(Dictionary<string, string> result)

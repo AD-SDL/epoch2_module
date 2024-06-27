@@ -142,28 +142,35 @@ namespace epoch2_module
                 Console.WriteLine("Plate read completed.");
             }
 
-            object? file_export_names = null;
-            plate.GetFileExportNames(false, ref file_export_names);
-            Console.WriteLine(file_export_names);
-            string[] file_export_array = (string[])file_export_names;
-            string old_temp_file = Path.GetTempFileName();
-            string temp_file = Path.ChangeExtension(old_temp_file, ".csv");
-            File.Move(old_temp_file, temp_file);
-            if (file_export_array.Length == 0)
+            try
             {
-                Console.WriteLine("No configured file exports");
-                Console.WriteLine(temp_file);
-                plate.FileExport(temp_file);
-                action.result = StepSucceeded(temp_file);
-            } else
-            {
-                // Note: If there are multiple file exports configured, we only return the first one
-                Console.WriteLine(file_export_array[0]);
-                Console.WriteLine(temp_file);
-                plate.FileExportEx(file_export_array[0], temp_file);
-                action.result = StepResult(action_response: StepStatus.SUCCEEDED, action_msg: temp_file, action_log: temp_file);
-                action.result_is_file = true;
+                object? file_export_names = null;
+                plate.GetFileExportNames(false, ref file_export_names);
+                Console.WriteLine(file_export_names);
+                string[] file_export_array = (string[])file_export_names;
+                string old_temp_file = Path.GetTempFileName();
+                string temp_file = Path.ChangeExtension(old_temp_file, ".csv");
+                File.Move(old_temp_file, temp_file);
+                if (file_export_array.Length == 0)
+                {
+                    Console.WriteLine("No configured file exports");
+                    Console.WriteLine(temp_file);
+                    plate.FileExport(temp_file);
+                    action.result = StepSucceeded(temp_file);
+                } else
+                {
+                    // Note: If there are multiple file exports configured, we only return the first one to WEI
+                    Console.WriteLine(file_export_array[0]);
+                    Console.WriteLine(temp_file);
+                    plate.FileExportEx(file_export_array[0], temp_file);
+                    action.result = StepResult(action_response: StepStatus.SUCCEEDED, action_msg: temp_file, action_log: temp_file);
+                    action.result_is_file = true;
+                    action.cleanup_result_file = true;
+                }
+            }  catch (Exception e) {
+                action.result = StepFailed($"Error while writing output file: {e}");
             }
+            
             experiment.Close();
         }
 

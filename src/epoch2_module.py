@@ -19,7 +19,7 @@ from wei.types.module_types import (
 from wei.types.step_types import StepFailed, StepFileResponse, StepSucceeded
 from wei.utils import extract_version
 
-from epoch2_interface.epoch2_interface import Gen5Interface
+from epoch2_interface.epoch2_interface import Gen5Interface, Gen5
 
 epoch2_module = RESTModule(
     name="epoch2_module",
@@ -27,6 +27,7 @@ epoch2_module = RESTModule(
     description="Python WEI module to control the Epoch 2 Platereader",
     model="Epoch 2",
 )
+epoch2_module.arg_parser.add_argument("--com_port", default=4, type=int, help="The COM Port for the reader to interface with.")
 
 # ***********#
 # *Lifecycle*#
@@ -38,8 +39,12 @@ def startup_handler(state: State):
     Connects to Gen5 when the module starts up
     """
     state.gen5 = None
-    state.gen5 = Gen5Interface(com_port=state.com_port)
     state.experiment = None
+    state.plate_read_monitor = None
+    state.plate = None
+    state.plates = None
+    state.gen5 = Gen5Interface(com_port=state.com_port)
+
 
 
 
@@ -125,24 +130,25 @@ def cleanup_experiment(state: State):
     state.plate = None
     state.plates = None
 
-@epoch2_module.action(results=LocalFileModuleActionResult(label="experiment_result", description="The result of the experiment"))
+@epoch2_module.action(results=[LocalFileModuleActionResult(label="experiment_result", description="The result of the experiment")])
 def run_experiment(state: State, experiment_file_path: str, return_file: Annotated[bool, "Whether to return the results of the experiment run"] = False) -> ModuleAction:
     """
     Runs an experiment on the Epoch 2
     """
-    state.experiment = state.gen5.client.OpenExperiment(experiment_file_path)
+    print(f"Starting experiment {experiment_file_path}")
+    state.experiment = Gen5.Experiment(state.gen5.client.OpenExperiment(experiment_file_path))
     if state.experiment is None:
         cleanup_experiment(state)
         return StepFailed(error=f"Failed to open experiment {experiment_file_path}")
-    state.plates = state.experiment.Plates
+    state.plates = Gen5.Plates(state.experiment.Plates)
     if state.plates is None:
         cleanup_experiment(state)
         return StepFailed(error=f"Failed to get plates from experiment {experiment_file_path}")
     elif state.plates.Count != 1:
         cleanup_experiment(state)
         return StepFailed(error=f"Expected 1 plate, got {state.plates.Count}")
-    state.plate = state.plates.GetPlate(1)
-    state.plate_read_monitor = state.plate.StartRead()
+    state.plate = Gen5.Plate(state.plates.GetPlate(1))
+    state.plate_read_monitor = Gen5.PlateReadMonitor(state.plate.StartRead())
     if state.plate_read_monitor is None:
         cleanup_experiment(state)
         return StepFailed(error="Failed to start plate read")
@@ -176,7 +182,7 @@ def run_experiment(state: State, experiment_file_path: str, return_file: Annotat
 
 @epoch2_module.cancel()
 @epoch2_module.pause()
-def pause_handler(state: State) -> ModuleAction:
+def pause_handler(state: State) -> None:
     """
     Pauses the module
     """
@@ -184,13 +190,22 @@ def pause_handler(state: State) -> ModuleAction:
         state.plate.AbortRead()
 
 @epoch2_module.resume()
-def resume_handler(state: State) -> ModuleAction:
+def resume_handler(state: State) -> None:
     """
     Resumes the module
     """
     if state.plate is not None:
         if state.plate_read_monitor is None:
             state.plate_read_monitor = state.plate.ResumeRead()
+            state.status = ModuleStatus.BUSY
+            return
+    state.status = ModuleStatus.IDLE
+
+@epoch2_module.reset()
+def reset_handler(state: State) -> None:
+    pause_handler(state)
+    cleanup_experiment(state)
+    state.status = ModuleStatus.IDLE
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ from wei.types.module_types import (
 from wei.types.step_types import StepFailed, StepFileResponse, StepSucceeded
 from wei.utils import extract_version
 
-from epoch2_interface import Gen5Interface, Gen5
+from epoch2_interface import Gen5, Gen5Interface
 
 epoch2_module = RESTModule(
     name="epoch2_module",
@@ -27,11 +27,17 @@ epoch2_module = RESTModule(
     description="Python WEI module to control the Epoch 2 Platereader",
     model="Epoch 2",
 )
-epoch2_module.arg_parser.add_argument("--com_port", default=4, type=int, help="The COM Port for the reader to interface with.")
+epoch2_module.arg_parser.add_argument(
+    "--com_port",
+    default=4,
+    type=int,
+    help="The COM Port for the reader to interface with.",
+)
 
 # ***********#
 # *Lifecycle*#
 # ***********#
+
 
 @epoch2_module.startup()
 def startup_handler(state: State):
@@ -46,8 +52,6 @@ def startup_handler(state: State):
     state.gen5 = Gen5Interface(com_port=state.com_port)
 
 
-
-
 @epoch2_module.shutdown()
 def shutdown_handler(state: State):
     """
@@ -55,7 +59,6 @@ def shutdown_handler(state: State):
     """
     cleanup_experiment(state)
     del state.gen5
-
 
 
 @epoch2_module.state_handler()
@@ -79,7 +82,6 @@ def state_handler(state: State) -> ModuleState:
     )
 
 
-
 @staticmethod
 def exception_handler(
     state: State, exception: Exception, error_message: Optional[str] = None
@@ -98,6 +100,7 @@ def exception_handler(
 # Actions #
 ###########
 
+
 @epoch2_module.action()
 def carrier_in(state: State) -> ModuleAction:
     """
@@ -106,6 +109,7 @@ def carrier_in(state: State) -> ModuleAction:
     state.gen5.client.CarrierIn()
     return StepSucceeded()
 
+
 @epoch2_module.action()
 def carrier_out(state: State) -> ModuleAction:
     """
@@ -113,6 +117,7 @@ def carrier_out(state: State) -> ModuleAction:
     """
     state.gen5.client.CarrierOut()
     return StepSucceeded()
+
 
 def cleanup_experiment(state: State):
     """
@@ -130,20 +135,37 @@ def cleanup_experiment(state: State):
     state.plate = None
     state.plates = None
 
-@epoch2_module.action(results=[LocalFileModuleActionResult(label="experiment_result", description="The result of the experiment")])
-def run_experiment(state: State, experiment_file_path: str, return_file: Annotated[bool, "Whether to return the results of the experiment run"] = False) -> ModuleAction:
+
+@epoch2_module.action(
+    results=[
+        LocalFileModuleActionResult(
+            label="experiment_result", description="The result of the experiment"
+        )
+    ]
+)
+def run_experiment(
+    state: State,
+    experiment_file_path: str,
+    return_file: Annotated[
+        bool, "Whether to return the results of the experiment run"
+    ] = False,
+) -> ModuleAction:
     """
     Runs an experiment on the Epoch 2
     """
     print(f"Starting experiment {experiment_file_path}")
-    state.experiment = Gen5.Experiment(state.gen5.client.OpenExperiment(experiment_file_path))
+    state.experiment = Gen5.Experiment(
+        state.gen5.client.OpenExperiment(experiment_file_path)
+    )
     if state.experiment is None:
         cleanup_experiment(state)
         return StepFailed(error=f"Failed to open experiment {experiment_file_path}")
     state.plates = Gen5.Plates(state.experiment.Plates)
     if state.plates is None:
         cleanup_experiment(state)
-        return StepFailed(error=f"Failed to get plates from experiment {experiment_file_path}")
+        return StepFailed(
+            error=f"Failed to get plates from experiment {experiment_file_path}"
+        )
     elif state.plates.Count != 1:
         cleanup_experiment(state)
         return StepFailed(error=f"Expected 1 plate, got {state.plates.Count}")
@@ -155,9 +177,16 @@ def run_experiment(state: State, experiment_file_path: str, return_file: Annotat
     while state.plate_read_monitor.ReadInProgress:
         time.sleep(10)
     if state.plate_read_monitor.ErrorsCount > 0:
-        error_message = "; ".join([f"[{state.plate_read_monitor.GetErrorCode(i)}] {state.plate_read_monitor.GetErrorMessage(ErrorIndex=i)}" for i in range(state.plate_read_monitor.ErrorsCount)])
+        error_message = "; ".join(
+            [
+                f"[{state.plate_read_monitor.GetErrorCode(i)}] {state.plate_read_monitor.GetErrorMessage(ErrorIndex=i)}"
+                for i in range(state.plate_read_monitor.ErrorsCount)
+            ]
+        )
         cleanup_experiment(state)
-        return StepFailed(error=f"{state.plate_read_monitor.ErrorsCount} error(s) reading plate: {error_message}")
+        return StepFailed(
+            error=f"{state.plate_read_monitor.ErrorsCount} error(s) reading plate: {error_message}"
+        )
 
     if bool(return_file):
         try:
@@ -180,6 +209,7 @@ def run_experiment(state: State, experiment_file_path: str, return_file: Annotat
 # Admin Action #
 ################
 
+
 @epoch2_module.cancel()
 @epoch2_module.pause()
 def pause_handler(state: State) -> None:
@@ -188,6 +218,7 @@ def pause_handler(state: State) -> None:
     """
     if state.plate is not None:
         state.plate.AbortRead()
+
 
 @epoch2_module.resume()
 def resume_handler(state: State) -> None:
@@ -201,8 +232,10 @@ def resume_handler(state: State) -> None:
             return
     state.status = ModuleStatus.IDLE
 
+
 @epoch2_module.reset()
 def reset_handler(state: State) -> None:
+    """Reset the epoch 2"""
     pause_handler(state)
     cleanup_experiment(state)
     state.status = ModuleStatus.IDLE

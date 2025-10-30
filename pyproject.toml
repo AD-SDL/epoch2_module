@@ -129,4 +129,6 @@ implicit_reexport = true
 [dependency-groups]
 dev = [
     "ipykernel>=6.31.0",
+    "pre-commit>=4.3.0",
+    "ruff>=0.14.2",
 ]

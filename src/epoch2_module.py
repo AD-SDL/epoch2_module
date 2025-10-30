@@ -19,7 +19,7 @@ from wei.types.module_types import (
 from wei.types.step_types import StepFailed, StepFileResponse, StepSucceeded
 from wei.utils import extract_version
 
-from epoch2_interface.epoch2_interface import Gen5Interface, Gen5
+from epoch2_interface import Gen5Interface, Gen5
 
 epoch2_module = RESTModule(
     name="epoch2_module",

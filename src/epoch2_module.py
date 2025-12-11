@@ -146,7 +146,7 @@ class Epoch2Node(RestNode):
             )
         elif self.plates.Count != 1:
             self.cleanup_experiment()
-            return ActionFailed(errors=[f"Expected 1 plate, got {self.plates.Count}")]
+            return ActionFailed(errors=[f"Expected 1 plate, got {self.plates.Count}"])
         self.plate = Gen5.Plate(self.plates.GetPlate(1))
         self.plate_read_monitor = Gen5.PlateReadMonitor(self.plate.StartRead())
         if self.plate_read_monitor is None:

@@ -7,26 +7,30 @@ import traceback
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Optional
-from madsci.node_module.rest_node_module import RestNode, RestNodeConfig
-from madsci.common.types.base_types import Error
-from epoch2_interface import Gen5, Gen5Interface
-from madsci.node_module.helpers import action
+
 from madsci.common.types.action_types import ActionFailed
+from madsci.common.types.base_types import Error
+from madsci.node_module.helpers import action
+from madsci.node_module.rest_node_module import RestNode, RestNodeConfig
+
+from epoch2_interface import Gen5, Gen5Interface
+
 
 class Epoch2NodeConfig(RestNodeConfig):
     """Configuration for the Epoch2Node module"""
 
     com_port: int = 4
 
+
 class Epoch2Node(RestNode):
     """Python WEI module to control the Epoch 2 Platereader"""
+
     config = Epoch2NodeConfig()
     config_model = Epoch2NodeConfig
 
-# ***********#
-# *Lifecycle*#
-# ***********#
-
+    # ***********#
+    # *Lifecycle*#
+    # ***********#
 
     def startup_handler(self):
         """
@@ -39,8 +43,6 @@ class Epoch2Node(RestNode):
         self.plates = None
         self.gen5 = Gen5Interface(com_port=self.config.com_port)
 
-
-
     def shutdown_handler(self):
         """
         Disconnects from Gen5 before shutting down the module
@@ -49,10 +51,6 @@ class Epoch2Node(RestNode):
         self.cleanup_experiment()
         del self.gen5
         self.gen5 = None
-
-
-
-
 
     def state_handler(self) -> dict:
         """
@@ -66,8 +64,6 @@ class Epoch2Node(RestNode):
             raise e
 
         return {"reader_status": reader_status}
-            
-
 
     def exception_handler(
         self, exception: Exception, error_message: Optional[str] = None
@@ -78,14 +74,12 @@ class Epoch2Node(RestNode):
             print(f"Error: {error_message}")
         traceback.print_exc()
         self.node_status.errored = True
-        self.node_status.errors.append(Error(str(exception))) 
+        self.node_status.errors.append(Error(str(exception)))
         self.cleanup_experiment()
-
 
     ###########
     # Actions #
     ###########
-
 
     @action
     def carrier_in(self) -> None:
@@ -94,14 +88,12 @@ class Epoch2Node(RestNode):
         """
         self.gen5.client.CarrierIn()
 
-
     @action
     def carrier_out(self) -> None:
         """
         Moves the carrier out
         """
         self.gen5.client.CarrierOut()
-
 
     def cleanup_experiment(self):
         """
@@ -118,7 +110,6 @@ class Epoch2Node(RestNode):
         self.plate_read_monitor = None
         self.plate = None
         self.plates = None
-
 
     @action
     def run_experiment(
@@ -137,7 +128,9 @@ class Epoch2Node(RestNode):
         )
         if self.experiment is None:
             self.cleanup_experiment()
-            return ActionFailed(error=f"Failed to open experiment {experiment_file_path}")
+            return ActionFailed(
+                error=f"Failed to open experiment {experiment_file_path}"
+            )
         self.plates = Gen5.Plates(self.experiment.Plates)
         if self.plates is None:
             self.cleanup_experiment()
@@ -163,14 +156,20 @@ class Epoch2Node(RestNode):
             )
             self.cleanup_experiment()
             return ActionFailed(
-                errors=[f"{self.plate_read_monitor.ErrorsCount} error(s) reading plate: {error_message}"]
+                errors=[
+                    f"{self.plate_read_monitor.ErrorsCount} error(s) reading plate: {error_message}"
+                ]
             )
 
         if bool(return_file):
             try:
                 file_export_names = []
-                file_export_names = self.plate.GetFileExportNames(False, file_export_names)
-                with NamedTemporaryFile(delete=False, delete_on_close=False) as temp_file:
+                file_export_names = self.plate.GetFileExportNames(
+                    False, file_export_names
+                )
+                with NamedTemporaryFile(
+                    delete=False, delete_on_close=False
+                ) as temp_file:
                     temp_file.close()
                     self.plate.FileExportEx(file_export_names[0], temp_file.name)
                     self.cleanup_experiment()
@@ -180,7 +179,6 @@ class Epoch2Node(RestNode):
                 raise e
         else:
             self.cleanup_experiment()
-
 
     ################
     # Admin Action #
@@ -192,7 +190,6 @@ class Epoch2Node(RestNode):
         """
         if self.plate is not None:
             self.plate.AbortRead()
-
 
 
 if __name__ == "__main__":

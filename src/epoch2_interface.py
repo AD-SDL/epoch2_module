@@ -85,7 +85,7 @@ class Gen5Interface:
 
     def run_experiment(
         self, experiment_file_path: WindowsPath, return_file: bool = False
-    ) -> Optional[WindowsPath]:
+    ) -> tuple[bool, Optional[WindowsPath]]:
         """
         Runs an experiment on the Epoch 2
         """
@@ -138,15 +138,16 @@ class Gen5Interface:
                 ) as temp_file:
                     temp_file.close()
                     self.plate.FileExportEx(file_export_names[0], temp_file.name)
-                    return WindowsPath(temp_file.name)
+                    return True, WindowsPath(temp_file.name)
             else:
-                return
+                return True, None
         except KeyboardInterrupt:
             print("Interrupted by user, aborting experiment!")
             print("⚠️⚠️⚠️DO NOT INTERRUPT THIS PROCESS, IT MAY TAKE 30+ SECONDS!⚠️⚠️⚠️")
             print(
                 "⚠️⚠️⚠️If prompted by the Jupyter Kernel to Restart, DON'T! (click 'cancel' to dismiss the dialog)⚠️⚠️⚠️"
             )
+            return False, None
         finally:
             self.cleanup_experiment()
 

@@ -1,9 +1,9 @@
 """
-REST-based node that interfaces with WEI and provides a simple Sleep(t) function
+REST-based node that interfaces with MADsci to control the Epoch2 Platereader
 """
 
 import traceback
-from pathlib import Path
+from pathlib import Path, WindowsPath
 from typing import Annotated, Optional
 
 from madsci.common.types.base_types import Error
@@ -20,7 +20,7 @@ class Epoch2NodeConfig(RestNodeConfig):
 
 
 class Epoch2Node(RestNode):
-    """Python WEI module to control the Epoch 2 Platereader"""
+    """Python MADSci module to control the Epoch 2 Platereader"""
 
     config: Epoch2NodeConfig = Epoch2NodeConfig()
     config_model = Epoch2NodeConfig
@@ -43,12 +43,11 @@ class Epoch2Node(RestNode):
         del self.epoch2
         self.epoch2 = None
 
-    def state_handler(self) -> dict:
+    def state_handler(self) -> None:
         """
         Returns the state of the module
         """
-
-        return {"reader_status": self.epoch2.get_reader_status()}
+        self.node_state = {"reader_status": self.epoch2.get_reader_status()}
 
     def exception_handler(
         self, exception: Exception, error_message: Optional[str] = None
@@ -92,7 +91,7 @@ class Epoch2Node(RestNode):
         Runs an experiment on the Epoch 2
         """
         read_completed, file = self.epoch2.run_experiment(
-            experiment_file_path=experiment_file_path, return_file=return_file
+            experiment_file_path=WindowsPath(experiment_file_path), return_file=return_file
         )
 
     ################

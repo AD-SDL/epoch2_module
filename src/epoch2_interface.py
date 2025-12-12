@@ -104,7 +104,7 @@ class Gen5Interface:
                 raise ValueError(
                     f"Failed to get plates from experiment {experiment_path_str}"
                 )
-            elif self.plates.Count != 1:
+            if self.plates.Count != 1:
                 raise ValueError(f"Expected 1 plate, got {self.plates.Count}")
             self.plate = Gen5.Plate(self.plates.GetPlate(1))
             self.plate_read_monitor = Gen5.PlateReadMonitor(self.plate.StartRead())

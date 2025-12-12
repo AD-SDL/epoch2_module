@@ -90,9 +90,11 @@ class Epoch2Node(RestNode):
         """
         Runs an experiment on the Epoch 2
         """
-        read_completed, file = self.epoch2.run_experiment(
-            experiment_file_path=WindowsPath(experiment_file_path), return_file=return_file
+        _, file = self.epoch2.run_experiment(
+            experiment_file_path=WindowsPath(experiment_file_path),
+            return_file=return_file,
         )
+        return Path(file)
 
     ################
     # Admin Action #

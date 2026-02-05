@@ -3,10 +3,11 @@
 import gc
 import time
 from datetime import datetime
+from logging import Logger, getLogger
 from pathlib import WindowsPath
 from tempfile import NamedTemporaryFile
 from typing import Optional
-from logging import Logger
+
 import clr
 
 clr.AddReference(
@@ -40,7 +41,13 @@ class Gen5Interface:
         manual for details regarding error statuses
     """
 
-    def __init__(self, com_port: int =4, reader_type: int=22, baud_rate:int=38400, logger: Optional[Logger]=None) -> None:
+    def __init__(
+        self,
+        com_port: int = 4,
+        reader_type: int = 22,
+        baud_rate: int = 38400,
+        logger: Optional[Logger] = None,
+    ) -> None:
         """Initialize the interface to the Epoch 2"""
         self.client = Gen5.Application()
         self.client.ConfigureSerialReader(reader_type, com_port, baud_rate)
@@ -48,7 +55,7 @@ class Gen5Interface:
         if logger is not None:
             self.logger = logger
         else:
-            self.logger = Logger("EpochLogger")
+            self.logger = getLogger()
         self.logger.log(
             "Communications passed"
             if comms_test == 1
@@ -56,26 +63,25 @@ class Gen5Interface:
         )
         self.get_reader_status()
 
-    def get_reader_status(self):
+    def get_reader_status(self) -> int:
         """Get the status data from the Reader"""
         self.status = self.client.GetReaderStatus()
         return self.status
 
-    def carrier_in(self):
+    def carrier_in(self) -> None:
         """Moves the plate carrier in"""
         self.client.CarrierIn()
 
-    def carrier_out(self):
+    def carrier_out(self) -> None:
         """Moves the plate carrier out"""
         self.client.CarrierOut()
 
-    def cleanup_experiment(self):
+    def cleanup_experiment(self) -> None:
         """
         Cleans up an experiment
         """
         self.logger.log("Cleaning up experiment")
-        if self.plate_read_monitor is not None:
-            if self.plate_read_monitor.ReadInProgress:
+        if self.plate_read_monitor is not None and self.plate_read_monitor.ReadInProgress:
                 self.plate.AbortRead()
                 while self.plate_read_monitor.ReadInProgress:
                     time.sleep(1)
@@ -114,12 +120,14 @@ class Gen5Interface:
             self.plate_read_monitor = Gen5.PlateReadMonitor(self.plate.StartRead())
             if self.plate_read_monitor is None:
                 raise RuntimeError("Failed to start plate read")
-            last_self.logger.log_time = time.time()
+            last_print = time.time()
             time.time()
             while self.plate_read_monitor.ReadInProgress:
-                if time.time() - last_self.logger.log_time > 60:
-                    self.logger.log(f"Read in progress as of {datetime.now().astimezone()}")
-                    last_self.logger.log_time = time.time()
+                if time.time() - last_print > 60:
+                    self.logger.log(
+                        f"Read in progress as of {datetime.now().astimezone()}"
+                    )
+                    last_print = time.time()
                 time.sleep(1)
             if self.plate_read_monitor.ErrorsCount > 0:
                 error_message = "; ".join(
@@ -147,7 +155,9 @@ class Gen5Interface:
                 return True, None
         except KeyboardInterrupt:
             self.logger.log("Interrupted by user, aborting experiment!")
-            self.logger.log("⚠️⚠️⚠️DO NOT INTERRUPT THIS PROCESS, IT MAY TAKE 30+ SECONDS!⚠️⚠️⚠️")
+            self.logger.log(
+                "⚠️⚠️⚠️DO NOT INTERRUPT THIS PROCESS, IT MAY TAKE 30+ SECONDS!⚠️⚠️⚠️"
+            )
             self.logger.log(
                 "⚠️⚠️⚠️If prompted by the Jupyter Kernel to Restart, DON'T! (click 'cancel' to dismiss the dialog)⚠️⚠️⚠️"
             )
@@ -155,7 +165,7 @@ class Gen5Interface:
         finally:
             self.cleanup_experiment()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Attempt to cleanly shutdown and disconnect from Epoch 2"""
         self.cleanup_experiment()
         del self.client
@@ -164,11 +174,11 @@ class Gen5Interface:
         GC.WaitForPendingFinalizers()
         gc.collect()
 
-    def cancel(self):
+    def cancel(self) -> None:
         """Attempt to cancel any running reads"""
         self.cleanup_experiment()
 
-    def resume(self):
+    def resume(self) -> None:
         """Attempt to resume a paused run"""
         if self.plate is not None:
             if self.plate_read_monitor is None:

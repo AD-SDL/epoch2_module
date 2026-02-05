@@ -30,13 +30,13 @@ class Epoch2Node(RestNode):
     # *Lifecycle*#
     # ***********#
 
-    def startup_handler(self):
+    def startup_handler(self) -> None:
         """
         Connects to Gen5 when the module starts up
         """
         self.epoch2 = Gen5Interface(com_port=self.config.com_port, logger=self.logger)
 
-    def shutdown_handler(self):
+    def shutdown_handler(self) -> None:
         """
         Disconnects from Gen5 before shutting down the module
         """
@@ -51,7 +51,7 @@ class Epoch2Node(RestNode):
 
     def exception_handler(
         self, exception: Exception, error_message: Optional[str] = None
-    ):
+    ) -> None:
         """This function is called whenever a module encounters or throws an irrecoverable exception.
         It should handle the exception (print errors, do any logging, etc.) and set the module status to ERROR."""
         if error_message:

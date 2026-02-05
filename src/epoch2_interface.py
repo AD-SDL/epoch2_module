@@ -81,10 +81,13 @@ class Gen5Interface:
         Cleans up an experiment
         """
         self.logger.log("Cleaning up experiment")
-        if self.plate_read_monitor is not None and self.plate_read_monitor.ReadInProgress:
-                self.plate.AbortRead()
-                while self.plate_read_monitor.ReadInProgress:
-                    time.sleep(1)
+        if (
+            self.plate_read_monitor is not None
+            and self.plate_read_monitor.ReadInProgress
+        ):
+            self.plate.AbortRead()
+            while self.plate_read_monitor.ReadInProgress:
+                time.sleep(1)
         if self.experiment is not None:
             self.experiment.Close()
             self.experiment = None
@@ -180,10 +183,9 @@ class Gen5Interface:
 
     def resume(self) -> None:
         """Attempt to resume a paused run"""
-        if self.plate is not None:
-            if self.plate_read_monitor is None:
-                self.plate_read_monitor = self.plate.ResumeRead()
-                return
+        if self.plate is not None and self.plate_read_monitor is None:
+            self.plate_read_monitor = self.plate.ResumeRead()
+            return
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import WindowsPath
 from tempfile import NamedTemporaryFile
 from typing import Optional
-
+from logging import Logger
 import clr
 
 clr.AddReference(
@@ -40,12 +40,16 @@ class Gen5Interface:
         manual for details regarding error statuses
     """
 
-    def __init__(self, com_port=4, reader_type=22, baud_rate=38400):
+    def __init__(self, com_port: int =4, reader_type: int=22, baud_rate:int=38400, logger: Optional[Logger]=None) -> None:
         """Initialize the interface to the Epoch 2"""
         self.client = Gen5.Application()
         self.client.ConfigureSerialReader(reader_type, com_port, baud_rate)
         comms_test = self.client.TestReaderCommunication()
-        print(
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = Logger("EpochLogger")
+        self.logger.log(
             "Communications passed"
             if comms_test == 1
             else f"Communications test returned error code: {comms_test}"
@@ -69,7 +73,7 @@ class Gen5Interface:
         """
         Cleans up an experiment
         """
-        print("Cleaning up experiment")
+        self.logger.log("Cleaning up experiment")
         if self.plate_read_monitor is not None:
             if self.plate_read_monitor.ReadInProgress:
                 self.plate.AbortRead()
@@ -81,7 +85,7 @@ class Gen5Interface:
         self.plate_read_monitor = None
         self.plate = None
         self.plates = None
-        print("Cleanup complete")
+        self.logger.log("Cleanup complete")
 
     def run_experiment(
         self, experiment_file_path: WindowsPath, return_file: bool = False
@@ -90,7 +94,7 @@ class Gen5Interface:
         Runs an experiment on the Epoch 2
         """
         try:
-            print(f"Starting experiment {experiment_file_path}")
+            self.logger.log(f"Starting experiment {experiment_file_path}")
             experiment_path_str = str(experiment_file_path)
             self.experiment = Gen5.Experiment(
                 self.client.OpenExperiment(experiment_path_str)
@@ -110,12 +114,12 @@ class Gen5Interface:
             self.plate_read_monitor = Gen5.PlateReadMonitor(self.plate.StartRead())
             if self.plate_read_monitor is None:
                 raise RuntimeError("Failed to start plate read")
-            last_print_time = time.time()
+            last_self.logger.log_time = time.time()
             time.time()
             while self.plate_read_monitor.ReadInProgress:
-                if time.time() - last_print_time > 60:
-                    print(f"Read in progress as of {datetime.now().astimezone()}")
-                    last_print_time = time.time()
+                if time.time() - last_self.logger.log_time > 60:
+                    self.logger.log(f"Read in progress as of {datetime.now().astimezone()}")
+                    last_self.logger.log_time = time.time()
                 time.sleep(1)
             if self.plate_read_monitor.ErrorsCount > 0:
                 error_message = "; ".join(
@@ -142,9 +146,9 @@ class Gen5Interface:
             else:
                 return True, None
         except KeyboardInterrupt:
-            print("Interrupted by user, aborting experiment!")
-            print("⚠️⚠️⚠️DO NOT INTERRUPT THIS PROCESS, IT MAY TAKE 30+ SECONDS!⚠️⚠️⚠️")
-            print(
+            self.logger.log("Interrupted by user, aborting experiment!")
+            self.logger.log("⚠️⚠️⚠️DO NOT INTERRUPT THIS PROCESS, IT MAY TAKE 30+ SECONDS!⚠️⚠️⚠️")
+            self.logger.log(
                 "⚠️⚠️⚠️If prompted by the Jupyter Kernel to Restart, DON'T! (click 'cancel' to dismiss the dialog)⚠️⚠️⚠️"
             )
             return False, None

@@ -34,7 +34,7 @@ class Epoch2Node(RestNode):
         """
         Connects to Gen5 when the module starts up
         """
-        self.epoch2 = Gen5Interface(com_port=self.config.com_port)
+        self.epoch2 = Gen5Interface(com_port=self.config.com_port, logger=self.logger)
 
     def shutdown_handler(self):
         """
